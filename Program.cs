@@ -12,20 +12,6 @@ namespace MatchSolver
 
     public static class MatchDigitsStore
     {
-        //public static Dictionary<int, List<bool>> store = new Dictionary<int, List<bool>>
-        //{
-        //    { 0, new List<bool> { true, true, true, false, true, true, true } },
-        //    { 1, new List<bool> { false, false, true, false, false, true, false } },
-        //    { 2, new List<bool> { true, false, true, true, true, false, true } },
-        //    { 3, new List<bool> { true, false, true, true, false, true, true } },
-        //    { 4, new List<bool> { false, true, true, true, false, true, false } },
-        //    { 5, new List<bool> { true, true, false, true, false, true, true } },
-        //    { 6, new List<bool> { true, true, false, true, true, true, true } },
-        //    { 7, new List<bool> { true, false, true, false, false, true, false } },
-        //    { 8, new List<bool> { true, true, true, true, true, true, true } },
-        //    { 9, new List<bool> { true, true, true, true, false, true, true } },
-        //};
-
         public static List<List<bool>> store = new List<List<bool>>
         {
             new List<bool> { true, true, true, false, true, true, true },
@@ -51,13 +37,21 @@ namespace MatchSolver
 
         public MatchDigit(char symbol)
         {
-            MatchPositions = symbol switch
+            try
             {
-                '-' => new List<bool> { true, false, false },
-                '=' => new List<bool> { true, true, false },
-                '+' => new List<bool> { true, false, true },
-                _ => throw new InvalidOperationException("Wrong char for symbol type MatchDigit object."),
-            };
+                MatchPositions = symbol switch
+                {
+                    '-' => new List<bool> { true, false, false },
+                    '=' => new List<bool> { true, true, false },
+                    '+' => new List<bool> { true, false, true },
+                    _ => throw new InvalidOperationException("Wrong symbol found while processing equation: " + symbol),
+                };
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine(ex.Message);
+                Environment.Exit(-1);
+            }
             DigitType = DigitType.Symbol;
         }
 
@@ -138,9 +132,33 @@ namespace MatchSolver
 
     class Program
     {
+        static string inputEquation = "";
+        static bool verbose = false;
+
         static void Main(string[] args)
         {
-            List<MatchDigit> origEquation = new List<MatchDigit> { new MatchDigit(2), new MatchDigit('-'), new MatchDigit(2), new MatchDigit('+'), new MatchDigit(8), new MatchDigit('='), new MatchDigit(2) };
+            if (args.Length == 0)
+            {
+                Console.WriteLine("Usage: MathSolver <equation> [--verbose]");
+                Environment.Exit(-1);
+            }
+            else
+            {
+                var argsList = args.ToList();
+                if (argsList.Contains("--verbose"))
+                {
+                    verbose = true;
+                    argsList.Remove("--verbose");
+                }
+                inputEquation = argsList.FirstOrDefault();
+            }
+            if (String.IsNullOrWhiteSpace(inputEquation))
+            {
+                Console.WriteLine("An equation is required.");
+                Environment.Exit(-1);
+            }
+            
+            List<MatchDigit> origEquation = ConstructEquation(inputEquation);
             for (int firstDigitIndex = 0; firstDigitIndex < origEquation.Count; firstDigitIndex++)
             {
                 MatchDigit matchDigitToRemoveFrom = origEquation[firstDigitIndex];
@@ -167,7 +185,7 @@ namespace MatchSolver
                                     matchDigitToAddTo.MatchPositions[j] = true;
                                     if (matchDigitToAddTo.IsValid() && matchDigitToRemoveFrom.IsValid())
                                     {
-                                        if (args.Length == 1 && args[0] == "--verbose")
+                                        if (verbose)
                                         {
                                             Console.WriteLine(PrintEquation(origEquation, firstDigitIndex, i, secondDigitIndex, j));
                                         }
@@ -186,7 +204,23 @@ namespace MatchSolver
             }
 
             Console.WriteLine("Done.");
-            Console.ReadLine();
+        }
+
+        private static List<MatchDigit> ConstructEquation(string inputEquation)
+        {
+            List<MatchDigit> equation = new List<MatchDigit>(inputEquation.Length);
+            foreach (char character in inputEquation)
+            {
+                if (Char.IsDigit(character))
+                {
+                    equation.Add(new MatchDigit(Convert.ToInt32(character.ToString())));
+                }
+                else
+                {
+                    equation.Add(new MatchDigit(character));
+                }
+            }
+            return equation;
         }
 
         static bool EvaluateEquation(List<MatchDigit> origEquation)
@@ -211,7 +245,6 @@ namespace MatchSolver
                     {
                         equationSubs.Add(currentValue);
                         currentValue = currentDigit.ToInteger();
-                        //currentSymbol = '+';
                     }
                 }
                 else
